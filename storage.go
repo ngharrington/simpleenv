@@ -76,7 +76,6 @@ func (p *PlainTextSerializer) Deserialize(data []byte) (*EnvironmentVariables, e
 			continue
 		}
 		parts := strings.Split(line, "=")
-		fmt.Println(parts)
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid line in document: %s", line)
 		}
