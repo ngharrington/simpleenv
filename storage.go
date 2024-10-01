@@ -60,8 +60,8 @@ func (p *PlainTextSerializer) Serialize(env *EnvironmentVariables) ([]byte, erro
 	}
 	sort.Strings(keys)
 	var doc string
-	for name, value := range env.vars {
-		doc += fmt.Sprintf("%s=%s\n", name, value)
+	for _, key := range keys {
+		doc += fmt.Sprintf("%s=%s\n", key, env.vars[key])
 	}
 	return []byte(doc), nil
 }
