@@ -21,7 +21,7 @@ fi
 
 arch="amd64"
 
-go build -o ./ ./...
+GOARCH=$arch go build -o ./ ./...
 
 release="simpleenv-${VERSION}-${arch}"
 
