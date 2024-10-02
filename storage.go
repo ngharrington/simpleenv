@@ -55,7 +55,7 @@ type PlainTextSerializer struct{}
 
 func (p *PlainTextSerializer) Serialize(env *EnvironmentVariables) ([]byte, error) {
 	keys := make([]string, 0, len(env.vars))
-	for k, _ := range env.vars {
+	for k := range env.vars {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
