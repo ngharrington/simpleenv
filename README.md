@@ -29,6 +29,7 @@ Simple CLI to store and retrieve sets of environment variables and output "sourc
    go build -o simpleenv
    ```
 
+
 ## Usage
 
 ### Write Environment Variables
