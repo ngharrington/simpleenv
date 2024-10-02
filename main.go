@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -38,6 +40,10 @@ func main() {
 						Usage:    "ID for the environment variables",
 						Required: true,
 					},
+					&cli.BoolFlag{
+						Name:  "source",
+						Usage: "Output in 'source' format (e.g. export KEY=VALUE)",
+					},
 				},
 			},
 		},
@@ -45,7 +51,9 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		panic(err)
+		// we send error messages to stderr because we rely on stdout for
+		// e.g. output that can be used by "source" to set env variables in the shell.
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	}
 }
 
@@ -86,21 +94,41 @@ func readCommand(c *cli.Context) error {
 	region := os.Getenv("DO_SPACE_REGION")
 	accessKey := os.Getenv("DO_ACCESS_KEY")
 	secretKey := os.Getenv("DO_SECRET_KEY")
+	id := c.String("id")
+	sourceFlag := c.Bool("source")
 
 	if spaceName == "" || region == "" || accessKey == "" || secretKey == "" {
 		return fmt.Errorf("DigitalOcean Space credentials must be set via environment variables: DO_SPACE_NAME, DO_SPACE_REGION, DO_ACCESS_KEY, DO_SECRET_KEY")
 	}
+
 	storage, err := NewDOSpaceStorage(spaceName, region, accessKey, secretKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DOSpaceStorage: %v", err)
 	}
-	envVars, err := storage.Read(c.String("id"))
+
+	return executeReadCommand(storage, id, sourceFlag)
+}
+
+func executeReadCommand(storage Storage, id string, sourceFlag bool) error {
+	envVars, err := storage.Read(id)
 	if err != nil {
-		return fmt.Errorf("failed to read environment variables from space: %v", err)
+		return fmt.Errorf("failed to read environment variables from storage: %v", err)
 	}
-	fmt.Println("Environment variables read successfully")
-	for k, v := range envVars.vars {
-		fmt.Printf("%s=%s\n", k, v)
-	}
+	outputVars(envVars.vars, sourceFlag, os.Stdout)
 	return nil
+}
+
+func outputVars(vars map[string]string, sourceFlag bool, w io.Writer) {
+	orderedVars := make([]string, 0, len(vars))
+	for k := range vars {
+		orderedVars = append(orderedVars, k)
+	}
+	sort.Strings(orderedVars)
+	for _, key := range orderedVars {
+		if sourceFlag {
+			fmt.Fprintf(w, "export %s=%s\n", key, vars[key])
+		} else {
+			fmt.Fprintf(w, "%s=%s\n", key, vars[key])
+		}
+	}
 }

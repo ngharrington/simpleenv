@@ -42,7 +42,7 @@ func (e *EnvironmentVariables) Set(key, value string) {
 }
 
 type Storage interface {
-	Write(string, *EnvironmentVariables) error
+	Write(*EnvironmentVariables) error
 	Read(string) (*EnvironmentVariables, error)
 }
 
@@ -149,6 +149,39 @@ func (s *DOSpaceStorge) Read(id string) (*EnvironmentVariables, error) {
 		return nil, fmt.Errorf("unable to read object data: %v", err)
 	}
 	env, err := s.serializer.Deserialize(data)
+	if err != nil {
+		return nil, fmt.Errorf("unable to deserialize environment variables: %v", err)
+	}
+	return env, nil
+}
+
+type MockInMemoryStorage struct {
+	data       map[string][]byte
+	serializer Serializer
+}
+
+func NewMockInMemoryStorage() *MockInMemoryStorage {
+	return &MockInMemoryStorage{
+		data:       make(map[string][]byte),
+		serializer: &PlainTextSerializer{},
+	}
+}
+
+func (m *MockInMemoryStorage) Write(env *EnvironmentVariables) error {
+	serialized, err := m.serializer.Serialize(env)
+	if err != nil {
+		return fmt.Errorf("unable to serialize environment variables: %v", err)
+	}
+	m.data[env.ID] = serialized
+	return nil
+}
+
+func (m *MockInMemoryStorage) Read(id string) (*EnvironmentVariables, error) {
+	serialized, ok := m.data[id]
+	if !ok {
+		return nil, fmt.Errorf("environment variables not found")
+	}
+	env, err := m.serializer.Deserialize(serialized)
 	if err != nil {
 		return nil, fmt.Errorf("unable to deserialize environment variables: %v", err)
 	}
