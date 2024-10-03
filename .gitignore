@@ -1,3 +1,4 @@
 simpleenv
 coverage.txt
 .aider*
+.env

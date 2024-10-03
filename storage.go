@@ -12,9 +12,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-var errVarNotExists error = errors.New("variable does not exist")
+var errVarNotExists error = errors.New("environment variables with specified id do not exist")
 
 type EnvironmentVariables struct {
 	ID   string
@@ -22,11 +23,12 @@ type EnvironmentVariables struct {
 }
 
 func (e *EnvironmentVariables) ListVariables() []string {
-	var variables []string
-	for key := range e.vars {
-		variables = append(variables, key)
+	keys := make([]string, 0, len(e.vars))
+	for k := range e.vars {
+		keys = append(keys, k)
 	}
-	return variables
+	sort.Strings(keys)
+	return keys
 }
 
 func (e *EnvironmentVariables) Get(key string) (string, error) {
@@ -54,11 +56,7 @@ type Serializer interface {
 type PlainTextSerializer struct{}
 
 func (p *PlainTextSerializer) Serialize(env *EnvironmentVariables) ([]byte, error) {
-	keys := make([]string, 0, len(env.vars))
-	for k := range env.vars {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	keys := env.ListVariables()
 	var doc string
 	for _, key := range keys {
 		doc += fmt.Sprintf("%s=%s\n", key, env.vars[key])
@@ -141,6 +139,10 @@ func (s *DOSpaceStorge) Read(id string) (*EnvironmentVariables, error) {
 		Key:    aws.String(id),
 	})
 	if err != nil {
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return nil, errVarNotExists
+		}
 		return nil, fmt.Errorf("unable to read object from space: %v", err)
 	}
 	defer resp.Body.Close()
