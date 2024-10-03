@@ -90,18 +90,15 @@ func writeCommand(c *cli.Context) error {
 }
 
 func readCommand(c *cli.Context) error {
-	spaceName := os.Getenv("DO_SPACE_NAME")
-	region := os.Getenv("DO_SPACE_REGION")
-	accessKey := os.Getenv("DO_ACCESS_KEY")
-	secretKey := os.Getenv("DO_SECRET_KEY")
 	id := c.String("id")
 	sourceFlag := c.Bool("source")
 
-	if spaceName == "" || region == "" || accessKey == "" || secretKey == "" {
-		return fmt.Errorf("DigitalOcean Space credentials must be set via environment variables: DO_SPACE_NAME, DO_SPACE_REGION, DO_ACCESS_KEY, DO_SECRET_KEY")
+	config, err := LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %v", err)
 	}
 
-	storage, err := NewDOSpaceStorage(spaceName, region, accessKey, secretKey)
+	storage, err := NewDOSpaceStorage(config.SpaceName, config.Region, config.AccessKey, config.SecretKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize DOSpaceStorage: %v", err)
 	}
